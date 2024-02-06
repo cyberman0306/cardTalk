@@ -25,26 +25,23 @@ struct ContentView: View {
         ZStack {
             BackgroundGradientView()
             if showCard, let question = currentQuestion {
-                QuestionCardView(question: question, title: pickedCardTitle) {
+                PickedQuestionCardView(question: question, title: pickedCardTitle) {
                     withAnimation {
                         showCard = false
                     }
                 }
-                .transition(.move(edge: .bottom))
+                .transition(.opacity)
+                .rotation3DEffect(.degrees(showCard ? 0 : 180), axis: (x: 0, y: 1, z: 0))
                 .padding()
             } else {
-                DummyCardView(){ name in
+                SelectionCardView(showCard: $showCard){ name in
                     pickedCardTitle = name
-                    withAnimation {
-                        if name == "일상 질문" {
-                            showQuestion(from: dailyQuestions)
-                        } else {
-                            showQuestion(from: faithQuestions)
-                        }
-                        showCard = true
+                    if name == "일상 질문" {
+                        showQuestion(from: dailyQuestions)
+                    } else {
+                        showQuestion(from: faithQuestions)
                     }
                 }
-                .transition(.move(edge: .bottom))
                 .padding()
             }
         }
@@ -53,95 +50,122 @@ struct ContentView: View {
     // 질문을 랜덤하게 선택하고 카드를 표시하는 함수
     func showQuestion(from questions: [String]) {
         currentQuestion = questions.randomElement()
-        withAnimation {
-            showCard = true
-        }
+        showCard = true
     }
 }
 
 
 // 카드 뷰 정의
-struct DummyCardView: View {
+struct SelectionCardView: View {
+    @Binding var showCard: Bool
+    @State var animate3d: Bool = false
+    @State var scale: CGFloat = 1
+    @State var moveCenter: Bool = false
     var onDismiss: (String) -> Void
     var title = "버튼"
     var body: some View {
-        VStack {
-            Spacer()
-            Text("카드를 골라보세요")
-                .font(.title.bold())
-                .padding(20)
-                .shadow(radius: 5)
-            Spacer()
-            HStack {
-                ZStack{
-                    VStack{
-                        Rectangle()
-                            .fill(LinearGradient(gradient: Gradient(colors: [Color.red, Color.orange]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .foregroundColor(.brown)
-                            .cornerRadius(10)
-                            .padding(20)
-                            .shadow(radius: 15)
-                            .offset(CGSize(width: 10.0, height: 10.0))
-                    }
-                    Button {
-                        onDismiss("신앙 질문")
-                    } label: {
-                        Text("신앙 질문")
-                            .font(.title.bold())
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(LinearGradient(gradient: Gradient(colors: [Color.red, Color.orange]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                            .padding(20)
-                            .shadow(radius: 10)
-                            
-                    }
-                    
-                    
-                }
-                .aspectRatio(66/88, contentMode: .fit)
-                ZStack{
-                    VStack{
-                        Rectangle()
-                            .fill(LinearGradient(gradient: Gradient(colors: [Color.green, Color.mint]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .foregroundColor(.orange)
-                            .cornerRadius(10)
-                            .padding(20)
-                            .shadow(radius: 15)
-                            .offset(CGSize(width: 10.0, height: 10.0))
+        GeometryReader { geometry in
+            VStack {
+                Spacer()
+                Text("카드를 골라보세요")
+                    .font(.title.bold())
+                    .padding(20)
+                    .shadow(radius: 5)
+                Spacer()
+                HStack {
+                    ZStack{
+                        VStack{
+                            Rectangle()
+                                .fill(LinearGradient(gradient: Gradient(colors: [Color.red, Color.orange]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .foregroundColor(.brown)
+                                .cornerRadius(10)
+                                .padding(20)
+                                .shadow(radius: 15)
+                                .offset(CGSize(width: 10.0, height: 10.0))
+                                
+                        }
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.75)) {
+                                animate3d.toggle()
+                                scale = scale > 1 ? 1 : 2
+                                moveCenter.toggle() // 중앙으로 이동
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+                                withAnimation(.easeInOut) {
+                                    onDismiss("신앙 질문")
+                                }
+                            }
+                           
+                        } label: {
+                            Text("신앙 질문")
+                                .font(.title.bold())
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(LinearGradient(gradient: Gradient(colors: [Color.red, Color.orange]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                                .padding(20)
+                                .shadow(radius: 10)
+                                
+                                
+                        }
+                        .scaleEffect(scale)
+                        .rotation3DEffect(.degrees(animate3d ? -180 : 0), axis: (x: 0, y: 1, z: 0))
                         
                     }
-                    Button {
-                        onDismiss("일상 질문")
-                    } label: {
-                        Text("일상 질문")
-                            .font(.title.bold())
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(LinearGradient(gradient: Gradient(colors: [Color.green, Color.mint]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                            .padding(20)
-                            .shadow(radius: 10)
+                    .aspectRatio(66/88, contentMode: .fit)
+                    .frame(width: geometry.size.width / 2, height: geometry.size.height / 2)
+                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2) // 화면 중앙으로 배치
+                    
+                    ZStack{
+                        VStack{
+                            Rectangle()
+                                .fill(LinearGradient(gradient: Gradient(colors: [Color.green, Color.mint]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .foregroundColor(.orange)
+                                .cornerRadius(10)
+                                .padding(20)
+                                .shadow(radius: 15)
+                                .offset(CGSize(width: 10.0, height: 10.0))
+                            
+                        }
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.75)) {
+                                self.animate3d.toggle()
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+                                withAnimation(.easeInOut) {
+                                    onDismiss("일상 질문")
+                                }
+                            }
+                        } label: {
+                            Text("일상 질문")
+                                .font(.title.bold())
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(LinearGradient(gradient: Gradient(colors: [Color.green, Color.mint]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                                .padding(20)
+                                .shadow(radius: 10)
+                        }
+                        .rotation3DEffect(.degrees(animate3d ? -180 : 0), axis: (x: 0, y: 1, z: 0))
                     }
+                    .offset(CGSize(width: -5, height: 0))
+                    .aspectRatio(66/88, contentMode: .fit)
                 }
-                .offset(CGSize(width: -5, height: 0))
-                .aspectRatio(66/88, contentMode: .fit)
+                Spacer()
             }
-            Spacer()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.white)
+            .foregroundColor(.black)
+            .cornerRadius(20)
+            .shadow(radius: 20)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.white)
-        .foregroundColor(.black)
-        .cornerRadius(20)
-        .shadow(radius: 20)
     }
 }
 
-
 // 카드 뷰 정의
-struct QuestionCardView: View {
+struct PickedQuestionCardView: View {
     let question: String
     var title: String
     var onDismiss: () -> Void
@@ -149,12 +173,16 @@ struct QuestionCardView: View {
     var body: some View {
         VStack {
             Text(title)
+                .font(.title.bold())
                 .padding(50)
             Spacer()
             Text(question)
+                .font(.title.bold())
                 .padding()
             Spacer()
             Button("닫기", action: onDismiss)
+                .font(.title.bold())
+                .foregroundColor(.blue)
                 .padding(50)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -162,18 +190,6 @@ struct QuestionCardView: View {
         .foregroundColor(.black)
         .cornerRadius(20)
         .shadow(radius: 5)
-    }
-}
-
-// 버튼 스타일 정의
-struct CardButtonStyle: ButtonStyle {
-    func makeBody(configuration: Self.Configuration) -> some View {
-        configuration.label
-            .padding()
-            .background(Color.orange)
-            .foregroundColor(.white)
-            .cornerRadius(10)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
     }
 }
 
@@ -185,77 +201,7 @@ struct BackgroundGradientView: View {
     }
 }
 
-// 예시: 텍스트에 그라데이션 적용을 위한 확장
-extension View {
-    func gradientForegroundCustom(colors: [Color]) -> some View {
-        self.overlay(LinearGradient(gradient: Gradient(colors: colors), startPoint: .topLeading, endPoint: .bottomTrailing))
-            .mask(self)
-    }
-}
-extension View {
-    func gradientForeground(colors: [Color]) -> some View {
-        self.overlay(LinearGradient(gradient: Gradient(colors: colors), startPoint: .topLeading, endPoint: .bottomTrailing))
-            .mask(self)
-    }
-}
 
 #Preview {
     ContentView()
-}
-
-struct ContentaView: View {
-    @State private var flipped = false
-    @State private var animate3d = false
-
-    var body: some View {
-        VStack {
-            Spacer()
-            
-            // 3D 플립 애니메이션을 적용할 뷰
-            ZStack {
-                if flipped {
-                    DetailView()
-                        .frame(width: 200, height: 200)
-                        .transition(.opacity)
-                        .rotation3DEffect(.degrees(animate3d ? 180 : 0), axis: (x: 0, y: 1, z: 0))
-                } else {
-                    Button("신앙 질문") {
-                        withAnimation(.easeInOut(duration: 0.5)) {
-                            animate3d.toggle()
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                            withAnimation(.easeInOut) {
-                                flipped.toggle()
-                            }
-                        }
-                    }
-                    .frame(width: 200, height: 200)
-                    .background(LinearGradient(gradient: Gradient(colors: [Color.red, Color.orange]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                    .shadow(radius: 10)
-                    .rotation3DEffect(.degrees(animate3d ? 0 : -180), axis: (x: 0, y: 1, z: 0))
-                }
-            }
-            .frame(width: 200, height: 200)
-            .onTapGesture {
-                flipped.toggle()
-            }
-            
-            Spacer()
-        }
-    }
-}
-
-struct DetailView: View {
-    var body: some View {
-        VStack {
-            Text("세부 정보")
-                .foregroundColor(.white)
-                .font(.title)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.blue)
-        .cornerRadius(10)
-    }
 }
