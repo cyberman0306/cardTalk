@@ -193,15 +193,7 @@ struct PickedQuestionCardView: View {
     }
 }
 
-// 배경 그라데이션 뷰
-struct BackgroundGradientView: View {
-    var body: some View {
-        LinearGradient(gradient: Gradient(colors: [Color.yellow.opacity(0.5), Color.purple.opacity(0.5)]), startPoint: .topLeading, endPoint: .bottomTrailing)
-            .edgesIgnoringSafeArea(.all)
-    }
-}
-
 
 #Preview {
-    ContentView()
+    mainView()
 }
