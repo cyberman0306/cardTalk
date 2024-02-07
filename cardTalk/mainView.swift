@@ -113,60 +113,36 @@ struct mainView: View {
                                                 .padding(20)
                                                 .shadow(radius: 15)
                                                 .offset(CGSize(width: 10.0, height: 10.0))
+                                                .aspectRatio(66/88, contentMode: .fit)
                                         }
                                         
                                     }
                                     
                                     ZStack {
-                                        if isLifeButtonClickState {
-                                            Button {
-                                                withAnimation(.easeInOut(duration: 0.75)) {
-                                                    isLifeButtonClickState = false
-                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
-                                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                                            isHideDummyCardsState = false
-                                                        }
-                                                        
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.25)) {
+                                                isHideDummyCardsState = true
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                                    withAnimation(.easeInOut(duration: 0.75)) {
+                                                        isLifeButtonClickState.toggle()
                                                     }
                                                 }
-                                            } label: {
-                                                Text("기도 자주 하나요?")
-                                                    .font(.title.bold())
-                                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                                    .background(LinearGradient(gradient: Gradient(colors: [Color.green, Color.yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                    .foregroundColor(.white)
-                                                    .cornerRadius(10)
-                                                    .padding(20)
-                                                    .shadow(radius: 10)
                                             }
-                                            .rotation3DEffect(.degrees(isLifeButtonClickState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
-                                        } else {
-                                            Button {
-                                                withAnimation(.easeInOut(duration: 0.25)) {
-                                                    isHideDummyCardsState = true
-                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                                                        withAnimation(.easeInOut(duration: 0.75)) {
-                                                            isLifeButtonClickState = true
-                                                        }
-                                                    }
-                                                }
-                                            } label: {
-                                                Text("일상 질문")
-                                                    .font(.title.bold())
-                                                    .frame(maxWidth: 300, maxHeight: 300)
-                                                    .background(LinearGradient(gradient: Gradient(colors: [Color.green, Color.yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                    .foregroundColor(.white)
-                                                    .cornerRadius(10)
-                                                    .padding(20)
-                                                    .shadow(radius: 10)
-                                            }
+                                        } label: {
+                                            Text("일상 질문")
+                                                .font(.title.bold())
+                                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                                .background(LinearGradient(gradient: Gradient(colors: [Color.green, Color.yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                .foregroundColor(.white)
+                                                .cornerRadius(10)
+                                                .padding(20)
+                                                .shadow(radius: 10)
                                         }
-                                        //.scaleEffect(scale)
-                                        
+                                        //.rotation3DEffect(.degrees(isLifeButtonClickState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
                                     }
-                                    //.background(.blue)
-                                    .rotation3DEffect(.degrees(isLifeButtonClickState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
-                                }.aspectRatio(66/88, contentMode: .fit)
+                                    .aspectRatio(66/88, contentMode: .fit)
+                                }
+                                .aspectRatio(66/88, contentMode: .fit)
                             }
                             Spacer()
                         }
