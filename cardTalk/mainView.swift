@@ -44,31 +44,34 @@ struct mainView: View {
                                                 .offset(CGSize(width: 10.0, height: 10.0))
                                         }
                                     }
-                                
                                     
-                                
+                                    
+                                    
                                     ZStack {
                                         if isFaithButtonClickState {
-                                            Button {
-                                                withAnimation(.easeInOut(duration: 0.75)) {
-                                                    isFaithButtonClickState = false
-                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
-                                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                                            isHideDummyCardsState = false
+                                            VStack {
+                                                Button {
+                                                    withAnimation(.easeInOut(duration: 0.75)) {
+                                                        isFaithButtonClickState = false
+                                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+                                                            withAnimation(.easeInOut(duration: 0.25)) {
+                                                                isHideDummyCardsState = false
+                                                            }
+                                                            
                                                         }
-                                                        
                                                     }
+                                                } label: {
+                                                    Text("기도 자주 하나요?")
+                                                        .font(.title.bold())
+                                                        .foregroundColor(.white)
                                                 }
-                                            } label: {
-                                                Text("기도 자주 하나요?")
-                                                    .font(.title.bold())
-                                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                                    .background(LinearGradient(gradient: Gradient(colors: [Color.mint, Color.orange]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                    .foregroundColor(.white)
-                                                    .cornerRadius(10)
-                                                    .padding(20)
-                                                    .shadow(radius: 10)
                                             }
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .background(LinearGradient(gradient: Gradient(colors: [Color.mint, Color.orange]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                            .cornerRadius(10)
+                                            .padding(20)
+                                            .shadow(radius: 10)
+                                            
                                             .rotation3DEffect(.degrees(isFaithButtonClickState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
                                         } else {
                                             Button {
@@ -82,7 +85,7 @@ struct mainView: View {
                                                 }
                                                 
                                                 
-
+                                                
                                             } label: {
                                                 Text("신앙 질문")
                                                     .font(.title.bold())
@@ -151,31 +154,57 @@ struct mainView: View {
                                         }
                                         
                                         if isFlipedState {
-                                            Button {
-                                                withAnimation(.easeInOut(duration: 0.75)) {
-                                                    isFlipedState = false
-                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
-                                                        withAnimation(.easeInOut(duration: 0.75)) {
-                                                            isLifeButtonClickState = false
-                                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
-                                                                withAnimation(.easeInOut(duration: 0.75)) {
-                                                                    isHideDummyCardsState = false
-                                                                    
-                                                                }
-                                                            }
-                                                        }
+                                            VStack {
+                                                ZStack {
+                                                    VStack {
+                                                        Spacer()
+                                                        Text("질문 내용")
+                                                            .font(.title.bold())
+                                                            .foregroundColor(.white)
+                                                        Spacer()
                                                     }
+                                                    VStack {
+                                                        HStack {
+                                                            Button {
+                                                                withAnimation(.easeInOut(duration: 0.75)) {
+                                                                    isFlipedState = false
+                                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+                                                                        withAnimation(.easeInOut(duration: 0.75)) {
+                                                                            isLifeButtonClickState = false
+                                                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+                                                                                withAnimation(.easeInOut(duration: 0.75)) {
+                                                                                    isHideDummyCardsState = false
+                                                                                    
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            } label: {
+                                                                Text("X").bold()
+                                                            }
+                                                            Spacer()
+                                                            Button {
+                                                                // 다시 한바퀴 돌리는 로직
+                                                            } label: {
+                                                                Text("다시뽑기")
+                                                            }
+                                                        }.padding()
+                                                        Spacer()
+                                                    }
+                                                    
                                                 }
-                                            } label: {
-                                                Text("질문 내용")
-                                                    .font(.title.bold())
-                                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                                    .background(LinearGradient(gradient: Gradient(colors: [Color.white, Color.yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                    .foregroundColor(.white)
-                                                    .cornerRadius(10)
-                                                    .padding(20)
-                                                    .shadow(radius: 10)
+                                                
+                                                
+                                                
                                             }.rotation3DEffect(.degrees(isFlipedState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
+                                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                                .background(LinearGradient(gradient: Gradient(colors: [Color.white, Color.yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                            
+                                                .cornerRadius(10)
+                                                .padding(20)
+                                                .shadow(radius: 10)
+                                            
                                         }
                                         
                                     }
