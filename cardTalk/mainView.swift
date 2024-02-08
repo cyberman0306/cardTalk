@@ -11,6 +11,7 @@ struct mainView: View {
     @State var isFaithButtonClickState: Bool = false
     @State var isLifeButtonClickState: Bool = false
     @State var isHideDummyCardsState: Bool = false
+    @State var isFlipedState: Bool = false
     var body: some View {
         ZStack {
             BackgroundGradientView()
@@ -24,8 +25,9 @@ struct mainView: View {
                                 .font(.title.bold())
                                 .padding(20)
                                 .shadow(radius: 5)
+                            Spacer()
                         }
-                        Spacer()
+                        
                         HStack {
                             Spacer()
                             if !isLifeButtonClickState {
@@ -100,7 +102,9 @@ struct mainView: View {
                                 }
                                 .aspectRatio(66/88, contentMode: .fit)
                             }
-                            Spacer()
+                            if !isFaithButtonClickState && !isLifeButtonClickState {
+                                Spacer()
+                            }
                             if !isFaithButtonClickState {
                                 ZStack {
                                     if !isHideDummyCardsState {
@@ -120,11 +124,17 @@ struct mainView: View {
                                     
                                     ZStack {
                                         Button {
-                                            withAnimation(.easeInOut(duration: 0.25)) {
+                                            withAnimation(.easeInOut(duration: 0.75)) {
                                                 isHideDummyCardsState = true
-                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
                                                     withAnimation(.easeInOut(duration: 0.75)) {
-                                                        isLifeButtonClickState.toggle()
+                                                        isLifeButtonClickState = true
+                                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+                                                            withAnimation(.easeInOut(duration: 0.75)) {
+                                                                isFlipedState = true
+                                                                
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -137,9 +147,39 @@ struct mainView: View {
                                                 .cornerRadius(10)
                                                 .padding(20)
                                                 .shadow(radius: 10)
+                                                .opacity(isFlipedState ? 0 : 1)
                                         }
-                                        //.rotation3DEffect(.degrees(isLifeButtonClickState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
+                                        
+                                        if isFlipedState {
+                                            Button {
+                                                withAnimation(.easeInOut(duration: 0.75)) {
+                                                    isFlipedState = false
+                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+                                                        withAnimation(.easeInOut(duration: 0.75)) {
+                                                            isLifeButtonClickState = false
+                                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+                                                                withAnimation(.easeInOut(duration: 0.75)) {
+                                                                    isHideDummyCardsState = false
+                                                                    
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            } label: {
+                                                Text("질문 내용")
+                                                    .font(.title.bold())
+                                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                                    .background(LinearGradient(gradient: Gradient(colors: [Color.white, Color.yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                    .foregroundColor(.white)
+                                                    .cornerRadius(10)
+                                                    .padding(20)
+                                                    .shadow(radius: 10)
+                                            }.rotation3DEffect(.degrees(isFlipedState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
+                                        }
+                                        
                                     }
+                                    .rotation3DEffect(.degrees(isFlipedState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
                                     .aspectRatio(66/88, contentMode: .fit)
                                 }
                                 .aspectRatio(66/88, contentMode: .fit)
