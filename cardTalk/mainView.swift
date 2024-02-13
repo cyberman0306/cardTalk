@@ -24,7 +24,7 @@ struct mainView: View {
                     VStack {
                         Spacer()
                         if !isFaithButtonClickState && !isLifeButtonClickState {
-                            Text("카드를 골라보세요")
+                            Text("나눔 카드를 고르세요")
                                 .font(.title.bold())
                                 .padding(20)
                                 .shadow(radius: 5)
@@ -32,89 +32,23 @@ struct mainView: View {
                         }
                         
                         HStack {
-                            Spacer()
                             if !isLifeButtonClickState {
-                                ZStack {
-                                    if !isHideDummyCardsState {
-                                        withAnimation(.easeInOut(duration: 0.75)) {
-                                            Rectangle()
-                                                .fill(LinearGradient(gradient: Gradient(colors: [Color.orange, Color.yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                                .foregroundColor(.brown)
-                                                .cornerRadius(10)
-                                                .padding(20)
-                                                .shadow(radius: 15)
-                                                .offset(CGSize(width: 10.0, height: 10.0))
-                                        }
-                                    }
-                                    ZStack {
-                                        if isFaithButtonClickState {
-                                            VStack {
-                                                Button {
-                                                    withAnimation(.easeInOut(duration: 0.75)) {
-                                                        isFaithButtonClickState = false
-                                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
-                                                            withAnimation(.easeInOut(duration: 0.25)) {
-                                                                isHideDummyCardsState = false
-                                                            }
-                                                            
-                                                        }
-                                                    }
-                                                } label: {
-                                                    Text("기도 자주 하나요?")
-                                                        .font(.title.bold())
-                                                        .foregroundColor(.white)
-                                                }
-                                            }
-                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                            .background(LinearGradient(gradient: Gradient(colors: [Color.orange, Color.red]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                            .cornerRadius(10)
-                                            .padding(20)
-                                            .shadow(radius: 10)
-                                            
-                                            .rotation3DEffect(.degrees(isFaithButtonClickState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
-                                        } else {
-                                            Button {
-                                                withAnimation(.easeInOut(duration: 0.25)) {
-                                                    isHideDummyCardsState = true
-                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                                                        withAnimation(.easeInOut(duration: 0.75)) {
-                                                            isFaithButtonClickState = true
-                                                        }
-                                                    }
-                                                }
-                                                
-                                                
-                                                
-                                                
-                                            } label: {
-                                                Text("신앙 질문")
-                                                    .font(.title.bold())
-                                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                                    .background(LinearGradient(gradient: Gradient(colors: [Color.orange, Color.yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                    .foregroundColor(.white)
-                                                    .cornerRadius(10)
-                                                    .padding(20)
-                                                    .shadow(radius: 10)
-                                            }
-                                        }
-                                        
-                                        
-                                    }
-                                    .rotation3DEffect(.degrees(isFaithButtonClickState ? -180 : 0), axis: (x: 0, y: 1, z: 0))
-                                }
-                                .aspectRatio(66/88, contentMode: .fit)
+                                CardView(cardTitle: "신앙 질문",
+                                         isHideDummyCardsState: $isHideDummyCardsState,
+                                         isWorkingState: $isWorkingState, CardType: $isFaithButtonClickState,
+                                         isFlipedState: $isFlipedState, rotationAngle: $rotationAngle)
                             }
                             if !isFaithButtonClickState && !isLifeButtonClickState {
                                 Spacer()
                             }
                             if !isFaithButtonClickState {
-                                CardView(isHideDummyCardsState: $isHideDummyCardsState,
-                                         isWorkingState: $isWorkingState, isLifeButtonClickState: $isLifeButtonClickState, 
+                                CardView(cardTitle: "일상질문",
+                                         isHideDummyCardsState: $isHideDummyCardsState,
+                                         isWorkingState: $isWorkingState, CardType: $isLifeButtonClickState,
                                          isFlipedState: $isFlipedState, rotationAngle: $rotationAngle)
                             }
-                            Spacer()
                         }
+                        .padding()
                         Spacer()
                     }
                     Spacer()
