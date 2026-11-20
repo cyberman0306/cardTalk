@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactElement } from 'react'
 import { ArrowLeft, ArrowRight, Bookmark, Check, ChevronDown, ChevronUp, CircleCheck, Layers2, MessageCircle, Repeat2, RotateCw, UsersRound } from 'lucide-react'
 import type { Deck } from '../content/decks.ts'
 import { playerOptions, roundOptions, swapsLeft, totalTurns, type Table } from '../game.ts'
@@ -48,6 +48,50 @@ export function TablePlay({ table, deck, saved, onToggle, onPlay }: TablePlayPro
   const round = Math.floor(table.turn / table.players) + 1
   const seat = table.turn % table.players + 1
   const isLast = table.turn + 1 === totalTurns(table)
+  const [motion, setMotion] = useState<{ action: 'reveal' | 'swap' | 'next'; previous: ReactElement } | null>(null)
+  const liveCard = useRef<HTMLDivElement>(null)
+  const locked = useRef(false)
+
+  useLayoutEffect(() => {
+    if (!motion || !liveCard.current) return
+    const node = liveCard.current
+    if (motion.action !== 'swap' || document.activeElement === document.body) {
+      node.querySelector<HTMLElement>(motion.action === 'next' ? '.card-back' : 'h2')?.focus({ preventScroll: true })
+    }
+    let active = true
+    const animations = node.getAnimations()
+    function settle() {
+      if (active) {
+        locked.current = false
+        setMotion(null)
+      }
+    }
+    if (animations.length) void Promise.allSettled(animations.map(animation => animation.finished)).then(settle)
+    else settle()
+    return () => { active = false }
+  }, [motion])
+
+  function act(action: 'reveal' | 'swap' | 'next') {
+    if (locked.current) return
+    locked.current = true
+    setMotion({ action, previous: face })
+    onPlay(action)
+  }
+
+  const face = table.revealed ? <article key={card.id} className="question-face">
+    <div className="face-top"><span className="deck-sign"><DeckArt id={deck.id} /> {deck.title}</span>
+      <button className="icon-button save" aria-pressed={isSaved} aria-label={isSaved ? '질문 저장 해제' : '질문 저장'} onClick={() => onToggle(card.id)}><Bookmark fill={isSaved ? 'currentColor' : 'none'} size={21} /></button></div>
+    <div className="question-body" aria-live="polite"><h2 tabIndex={-1}>{card.question}</h2>
+      {followUpOpen && <p className="follow-up">{card.followUp}</p>}</div>
+    <button className="follow-button" aria-expanded={followUpOpen} onClick={() => setFollowUpFor(followUpOpen ? null : card.id)}>
+      <MessageCircle size={16} /> 꼬리 질문 {followUpOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+    </button>
+  </article> : <button key={'back-' + table.turn} className="card-back" onClick={() => act('reveal')} aria-label={'질문 카드 뒤집기, ' + seat + '번 자리'}>
+    <span className="back-top"><span>CardTalk</span><Layers2 size={18} /></span>
+    <DeckArt id={deck.id} />
+    <span className="flip-label"><RotateCw size={17} /> 질문 카드 뒤집기</span>
+  </button>
+
   return <main className={'page table-page theme-' + deck.id}>
     <div className="table-strip"><BackLink label="잠시 나가기" /><span>{deck.title}</span></div>
     <div className="turn-heading">
@@ -55,24 +99,13 @@ export function TablePlay({ table, deck, saved, onToggle, onPlay }: TablePlayPro
       <div className="seats" aria-label={table.players + '명 중 ' + seat + '번째 자리'}>{Array.from({ length: table.players }, (_, idx) =>
         <span key={idx} className={idx + 1 === seat ? 'current' : ''}>{idx + 1}</span>)}</div>
     </div>
-    <div className="play-card-stack">
-      {table.revealed ? <article key={card.id} className="question-face face-in">
-        <div className="face-top"><span className="deck-sign"><DeckArt id={deck.id} /> {deck.title}</span>
-          <button className="icon-button save" aria-pressed={isSaved} aria-label={isSaved ? '질문 저장 해제' : '질문 저장'} onClick={() => onToggle(card.id)}><Bookmark fill={isSaved ? 'currentColor' : 'none'} size={21} /></button></div>
-        <div className="question-body" aria-live="polite"><h2>{card.question}</h2>
-          {followUpOpen && <p className="follow-up" id="follow-up">{card.followUp}</p>}</div>
-        <button className="follow-button" aria-expanded={followUpOpen} onClick={() => setFollowUpFor(followUpOpen ? null : card.id)}>
-          <MessageCircle size={16} /> 꼬리 질문 {followUpOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-        </button>
-      </article> : <button key={'back-' + table.turn} className="card-back face-in" onClick={() => onPlay('reveal')} aria-label={'질문 카드 뒤집기, ' + seat + '번 자리'}>
-        <span className="back-top"><span>CardTalk</span><Layers2 size={18} /></span>
-        <DeckArt id={deck.id} />
-        <span className="flip-label"><RotateCw size={17} /> 질문 카드 뒤집기</span>
-      </button>}
+    <div className="play-card-stack" data-motion={motion?.action}>
+      {motion && <div className="card-outgoing" inert aria-hidden="true">{motion.previous}</div>}
+      <div ref={liveCard} className="card-live">{face}</div>
     </div>
     {table.revealed ? <div className="play-actions">
-      <button className="button secondary" disabled={swapsLeft(table) === 0} onClick={() => onPlay('swap')}><Repeat2 size={17} /> 질문 바꾸기</button>
-      <button className="button primary" onClick={() => onPlay('next')}>{isLast ? '대화 마치기' : '다음 차례'} {isLast ? <Check size={18} /> : <ArrowRight size={18} />}</button>
+      <button className="button secondary" disabled={swapsLeft(table) === 0} onClick={() => act('swap')}><Repeat2 size={17} /> 질문 바꾸기</button>
+      <button className="button primary" onClick={() => act('next')}>{isLast ? '대화 마치기' : '다음 차례'} {isLast ? <Check size={18} /> : <ArrowRight size={18} />}</button>
       {swapsLeft(table) === 0 && <small>남은 카드는 다음 차례를 위해 남겨 뒀어요. 답하지 않고 넘겨도 돼요.</small>}
     </div> : <p className="handoff-note">{seat === 1 && table.turn === 0 ? '휴대폰을 든 분이 첫 카드를 열어 주세요.' : seat + '번 자리에 휴대폰을 건네주세요.'}</p>}
   </main>
