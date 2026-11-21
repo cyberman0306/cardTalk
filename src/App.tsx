@@ -31,7 +31,14 @@ function Dialog({ title, children, onClose }: { title: string; children: ReactNo
 interface Setup { deck: Deck; players: number; rounds: number }
 
 export function App() {
-  const route = useSyncExternalStore(subscribeRoute, () => window.location.hash.slice(1) || 'home')
+  const hash = useSyncExternalStore(subscribeRoute, () => window.location.hash.slice(1) || 'home')
+  const policy = hash.endsWith('/privacy')
+  const route = policy ? hash.slice(0, -8) : hash
+  const [locale, setLocale] = useState(language)
+  useEffect(() => {
+    document.documentElement.lang = locale
+    document.title = t('카드톡 · 첫 모임을 여는 대화 카드', 'CardTalk · Conversation cards')
+  }, [locale])
   const [table, setTable] = useState<Table | null>(() => restoreTable(readLocal(tableKey)))
   const [saved, setSaved] = useState(() => restoreSaved(readLocal(savedKey)))
   const [help, setHelp] = useState(false)
@@ -41,12 +48,18 @@ export function App() {
   const tableDeck = table && findDeck(table.deckId)
   const playing = route === 'table' && table && tableDeck
   const library = !playing && !setupDeck && route !== 'saved'
-  useFinishBanner(Boolean(playing && isFinished(table)) && !help)
+  useFinishBanner(Boolean(playing && isFinished(table)) && !help && !policy)
 
+  const previousTable = useRef(table)
+  const previousSaved = useRef(saved)
   useEffect(() => {
+    if (previousTable.current === table) return
+    previousTable.current = table
     if (!writeLocal(tableKey, table)) setStorageIssue(true)
   }, [table])
   useEffect(() => {
+    if (previousSaved.current === saved) return
+    previousSaved.current = saved
     if (!writeLocal(savedKey, saved)) setStorageIssue(true)
   }, [saved])
   useEffect(() => {
@@ -63,13 +76,19 @@ export function App() {
   useEffect(() => {
     if (Capacitor.getPlatform() !== 'android') return
     const listener = NativeApp.addListener('backButton', () => {
-      if (help) setHelp(false)
+      if (policy) closePolicy()
+      else if (help) setHelp(false)
       else if (replacement) setReplacement(null)
       else if (!library) window.location.hash = 'home'
       else void NativeApp.minimizeApp()
     })
     return () => { void listener.then(handle => handle.remove()) }
-  }, [help, replacement, library])
+  }, [help, replacement, library, policy, route])
+
+  function closePolicy() {
+    if (history.state?.cardtalkPolicy) history.back()
+    else window.location.replace('#' + route)
+  }
 
   function start({ deck, players, rounds }: Setup) {
     setTable(newTable(deck, players, rounds))
@@ -93,7 +112,7 @@ export function App() {
       <nav aria-label={t("메인 메뉴", "Main menu")}>
         <a href="#home" className="home-nav" aria-current={library ? 'page' : undefined}><Layers2 /> {t("덱 고르기", "Choose a deck")}</a>
         <a href="#saved" aria-current={route === 'saved' ? 'page' : undefined}><Bookmark /> {t("보관함", "Saved")}</a>
-        <button className="lang-toggle" onClick={changeLanguage} aria-label={t("Switch to English", "한국어로 변경")}>{t("EN", "한국어")}</button>
+        <button className="lang-toggle" onClick={() => { changeLanguage(); setLocale(language) }} aria-label={t("영어로 변경", "Switch to Korean")}>{t("EN", "한국어")}</button>
         <button className="help-button" aria-label={t("이용 방법", "How to play")} onClick={() => setHelp(true)}><CircleHelp /></button>
       </nav>
     </div></header>
@@ -104,14 +123,21 @@ export function App() {
         onPlay={action => setTable(current => current && play(current, action))} />) :
       setupDeck ? <TableSetup key={setupDeck.id} deck={setupDeck} onStart={(players, rounds) => requestStart({ deck: setupDeck, players, rounds })} /> :
       route === 'saved' ? <SavedCards ids={saved} onToggle={toggleSaved} /> : <DeckLibrary table={table} />}
-    {help && <Dialog title={t("이용 방법", "How to play")} onClose={() => setHelp(false)}>
+    {help && !policy && <Dialog title={t("이용 방법", "How to play")} onClose={() => setHelp(false)}>
       <div className="help-steps">
         <div><UsersRound /><p><strong>{t("한 테이블에 모여요", "Gather around")}</strong>{t("덱과 인원, 바퀴 수를 골라요. 휴대폰을 든 분이 1번 자리예요.", "Choose a deck, players and rounds. The person holding the phone is seat one.")}</p></div>
         <div><MessageCircle /><p><strong>{t("카드를 뒤집고 이야기해요", "Flip a card")}</strong>{t("더 듣고 싶으면 꼬리 질문을 열어요. 질문을 바꾸거나, 답하지 않고 다음 차례로 넘겨도 돼요.", "Open the follow-up if you’re curious. Swap the question or pass without answering.")}</p></div>
         <div><Repeat2 /><p><strong>{t("시계 방향으로 건네요", "Pass clockwise")}</strong>{t("마지막 분까지 한 번씩 이야기하면 한 바퀴예요. 마음에 든 질문은 책갈피로 보관해요.", "One turn each makes a round. Bookmark questions you’d like to revisit.")}</p></div>
       </div>
       <button className="button primary wide" onClick={() => setHelp(false)}>{t("알겠어요", "Got it")}</button>
-      <div className="privacy-links"><a className="text-action" href={language === "en" ? "./privacy-en.html" : "./privacy.html"}>{t("개인정보처리방침", "Privacy policy")}</a><AdPrivacyOptions /></div>
+      <div className="privacy-links"><button className="text-action" onClick={() => {
+        history.pushState({ cardtalkPolicy: true }, '', '#' + route + '/privacy')
+        window.dispatchEvent(new HashChangeEvent('hashchange'))
+      }}>{t("개인정보처리방침", "Privacy policy")}</button><AdPrivacyOptions /></div>
+    </Dialog>}
+    {policy && <Dialog title={t("개인정보처리방침", "Privacy policy")} onClose={closePolicy}>
+      <iframe className="policy-frame" title={t("처리방침 본문", "Policy details")} src={locale === 'en' ? './privacy-en.html#embedded' : './privacy.html#embedded'} />
+      <button className="button secondary wide" onClick={closePolicy}>{t("돌아가기", "Go back")}</button>
     </Dialog>}
     {replacement && <Dialog title={t("새 대화를 시작할까요?", "Start a new conversation?")} onClose={() => setReplacement(null)}>
       <p className="dialog-copy">{t("진행 중인 판이 끝나고 새 카드를 섞어요. 보관함에 담은 질문은 계속 볼 수 있어요.", "This ends the current game and shuffles a new deck. Your saved questions stay with you.")}</p>
