@@ -9,7 +9,7 @@ test('each deck has enough distinct questions for six people, two rounds and a s
   assert.equal(new Set(all.map(card => card.id)).size, all.length)
   assert.equal(new Set(all.map(card => card.question)).size, all.length)
   assert.ok(all.every(card => card.question.endsWith('?') && card.followUp.endsWith('?')))
-  for (const deck of decks) assert.ok(deck.cards.length > 12)
+  for (const deck of decks) assert.equal(deck.cards.length, 20)
 })
 
 test('swapping preserves the seat and reserves a unique card for every remaining turn', () => {

@@ -1,13 +1,25 @@
 apply plugin: 'com.android.application'
 
+def releaseValue = { name ->
+    providers.environmentVariable("CARDTALK_" + name)
+        .orElse(providers.gradleProperty("CARDTALK_" + name)).getOrElse('').trim()
+}
+def adsAppId = releaseValue('ADMOB_APP_ID')
+def bannerId = releaseValue('ADMOB_BANNER_ID')
+def uploadFile = releaseValue('UPLOAD_STORE_FILE')
+def uploadAlias = releaseValue('UPLOAD_KEY_ALIAS')
+def uploadStorePassword = releaseValue('UPLOAD_STORE_PASSWORD')
+def uploadKeyPassword = releaseValue('UPLOAD_KEY_PASSWORD')
+def canSign = [uploadFile, uploadAlias, uploadStorePassword, uploadKeyPassword].every { !it.isEmpty() }
+
 android {
     namespace = "HyunJun.cardTalk"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "HyunJun.cardTalk"
+        applicationId "com.hyunjunyook.cardtalk"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode = (releaseValue('VERSION_CODE') ?: '1').toInteger()
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -16,11 +28,84 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (canSign) {
+            upload {
+                storeFile rootProject.file(uploadFile)
+                keyAlias uploadAlias
+                storePassword uploadStorePassword
+                keyPassword uploadKeyPassword
+            }
+        }
+    }
     buildTypes {
+        debug {
+            resValue 'string', 'admob_app_id', 'ca-app-pub-3940256099942544~3347511713'
+            resValue 'string', 'admob_finish_banner_id', 'ca-app-pub-3940256099942544/6300978111'
+        }
         release {
+            if (canSign) signingConfig signingConfigs.upload
+            resValue 'string', 'admob_app_id', adsAppId
+            resValue 'string', 'admob_finish_banner_id', bannerId
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+}
+
+def validateAds = {
+    if (!(adsAppId ==~ /ca-app-pub-\d{16}~\d{10}/) ||
+        !(bannerId ==~ /ca-app-pub-\d{16}\/\d{10}/) ||
+        adsAppId.take(27) != bannerId.take(27) || adsAppId.startsWith('ca-app-pub-3940256099942544')) {
+        throw new GradleException('Configure the CardTalk production ADMOB_APP_ID and ADMOB_BANNER_ID from the same publisher.')
+    }
+}
+tasks.register('validateReleaseAds') {
+    doLast { validateAds() }
+}
+tasks.matching { it.name == 'preReleaseBuild' }.configureEach { dependsOn 'validateReleaseAds' }
+def playConfiguration = tasks.register('verifyPlayConfiguration') {
+    doLast {
+        validateAds()
+        if (!canSign) throw new GradleException('Configure the CardTalk upload key before submitting to Play.')
+    }
+}
+tasks.matching { it.name == 'preReleaseBuild' }.configureEach { mustRunAfter playConfiguration }
+tasks.register('bundlePlay') {
+    group = 'build'
+    description = 'Build the signed Google Play bundle with the production AdMob placement.'
+    dependsOn playConfiguration, 'bundleRelease'
+}
+tasks.register('preparePlayWebsite') {
+    group = 'distribution'
+    description = 'Prepare the privacy policy and the publisher declaration for the developer website.'
+    def output = layout.buildDirectory.dir('outputs/play-website')
+    def listingLive = releaseValue('PLAY_LISTING_LIVE').equalsIgnoreCase('true')
+    def packageName = android.defaultConfig.applicationId
+    inputs.files(rootProject.file('../public/privacy.html'), rootProject.file('../public/privacy-en.html'))
+    inputs.files(rootProject.file('../store/site/index.html'), rootProject.file('../src/assets/phone-handoff.webp'), rootProject.file('../public/app-icon.png'))
+    inputs.property('admobAppId', adsAppId)
+    inputs.property('admobBannerId', bannerId)
+    inputs.property('listingLive', listingLive)
+    inputs.property('packageName', packageName)
+    outputs.dir(output)
+    doLast {
+        validateAds()
+        def directory = output.get().asFile
+        directory.mkdirs()
+        project.copy {
+            from rootProject.file('../public/privacy.html'), rootProject.file('../public/privacy-en.html'), rootProject.file('../src/assets/phone-handoff.webp'),
+                rootProject.file('../public/app-icon.png')
+            from(rootProject.file('../store/site/index.html')) {
+                def url = "https://play.google.com/store/apps/details?id=${packageName}&amp;utm_source=cardtalk_site&amp;utm_campaign=question_preview"
+                def link = listingLive ? "<a class=\"install\" href=\"${url}\">Google Play에서 설치</a>" : ''
+                filteringCharset = 'UTF-8'
+                filter { line -> line.replace('<!-- PLAY_INSTALL_LINK -->', link) }
+            }
+            into directory
+        }
+        def publisher = adsAppId.substring(7, adsAppId.indexOf('~'))
+        new File(directory, 'app-ads.txt').setText("google.com, ${publisher}, DIRECT, f08c47fec0942fa0\n", 'UTF-8')
     }
 }
 
@@ -31,6 +116,8 @@ repositories {
 }
 
 dependencies {
+    implementation 'com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk:1.7.0'
+    implementation 'com.google.android.ump:user-messaging-platform:4.0.0'
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"

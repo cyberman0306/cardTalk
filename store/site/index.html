@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="첫 모임을 여는 한국어 대화 카드. 휴대폰 한 대로 2~6명이 80장의 질문과 꼬리 질문을 나눠요.">
+  <title>카드톡 · 첫 모임을 여는 대화 카드</title>
+  <link rel="icon" href="./app-icon.png">
+  <style>
+    * { box-sizing: border-box }
+    body { margin: 0; background: #fbfaf5; color: #20382d; font: 1rem/1.65 system-ui, sans-serif; word-break: keep-all }
+    main, footer { max-width: 52rem; margin: auto; padding: 2rem 1.25rem }
+    header { display: flex; align-items: center; gap: .65rem; font-size: 1.55rem; font-weight: 750 }
+    header img { border-radius: .5rem }
+    section { display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; overflow: hidden; margin-top: 1.5rem; border: 1px solid #dbbc7b; border-radius: 1rem; background: #fcdc94 }
+    .copy { padding: 1.75rem }
+    .copy p { margin: .5rem 0 }
+    .copy h1 { margin: .55rem 0 1rem; font: 700 clamp(1.8rem, 4.2vw, 2.65rem)/1.35 Batang, serif; letter-spacing: -.045em }
+    .art { width: 100%; height: 100%; object-fit: cover }
+    .actions { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem .8rem; margin-top: .9rem }
+    button, .install { cursor: pointer; min-height: 44px; padding: .55rem 1rem; border: 0; border-radius: .5rem; background: #204536; color: #fff9e7; font: inherit; font-weight: 650; text-decoration: none }
+    .install + button { padding: .55rem .25rem; background: transparent; color: #204536; text-decoration: underline; text-underline-offset: 3px }
+    footer { padding-top: 0; color: #526356 }
+    footer a { display: inline-block; padding: .55rem 0; margin-right: 1rem; color: #204536; text-underline-offset: 3px }
+    :focus-visible { outline: 3px solid #a7471a; outline-offset: 3px }
+    @media (max-width: 36rem) {
+      section { grid-template-columns: 1fr }
+      .art { height: auto; max-height: 11rem; object-position: center 57% }
+      .copy { padding: 1.35rem }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header><img src="./app-icon.png" alt="" width="37" height="37">카드톡</header>
+    <section>
+      <div class="copy"><p id="deck">처음 만난 사이</p>
+        <h1 id="question" aria-live="polite">오늘 여기 오는 길에 뭐가 눈에 들어왔어요?</h1>
+        <p>휴대폰 한 대로 2~6명이 돌아가며 이야기해요. 네 가지 덱에 질문 80장과 꼬리 질문을 담았어요.</p>
+        <div class="actions">
+          <!-- PLAY_INSTALL_LINK -->
+          <button id="another" type="button" hidden>다른 질문 맛보기</button>
+        </div>
+      </div>
+      <img class="art" src="./phone-handoff.webp" width="1280" height="853" alt="질문 카드를 띄운 휴대폰을 건네는 두 손">
+    </section>
+  </main>
+  <footer><a href="./privacy.html">개인정보처리방침</a><a href="mailto:yhj03069@gmail.com">개발자에게 문의</a></footer>
+  <script>
+    const samples = [
+      ['처음 만난 사이', '오늘 여기 오는 길에 뭐가 눈에 들어왔어요?'],
+      ['취향 수집', '기차 창밖으로 어떤 풍경이 오래 이어지면 좋겠어요?'],
+      ['보통의 하루', '오늘 하루를 엽서로 만든다면 앞면에 어떤 장면을 담을래요?'],
+      ['한 걸음 더', '생활이 바빠져도 지키고 싶은 한 가지는 뭐예요?']
+    ]
+    let card = 0
+    const another = document.getElementById('another')
+    another.hidden = false
+    another.addEventListener('click', () => {
+      card = (card + 1) % samples.length
+      document.getElementById('deck').textContent = samples[card][0]
+      document.getElementById('question').textContent = samples[card][1]
+    })
+  </script>
+</body></html>

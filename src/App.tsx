@@ -1,3 +1,4 @@
+import { t, changeLanguage, language } from './language'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { App as NativeApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
@@ -7,6 +8,7 @@ import { isFinished, newTable, play, restoreTable, type Table } from './game.ts'
 import { readLocal, restoreSaved, savedKey, tableKey, writeLocal } from './storage.ts'
 import { DeckLibrary, SavedCards } from './components/Library'
 import { TableEnd, TablePlay, TableSetup } from './components/Table'
+import { AdPrivacyOptions, useFinishBanner } from './components/AndroidExtras'
 
 function subscribeRoute(onChange: () => void) {
   window.addEventListener('hashchange', onChange)
@@ -21,7 +23,7 @@ function Dialog({ title, children, onClose }: { title: string; children: ReactNo
     return () => node.close()
   }, [])
   return <dialog ref={ref} aria-labelledby="dialog-title" onCancel={event => { event.preventDefault(); onClose() }}>
-    <div className="dialog-heading"><h2 id="dialog-title">{title}</h2><button className="icon-button" onClick={onClose} aria-label="닫기"><X size={19} /></button></div>
+    <div className="dialog-heading"><h2 id="dialog-title">{title}</h2><button className="icon-button" onClick={onClose} aria-label={t("닫기", "Close")}><X size={19} /></button></div>
     {children}
   </dialog>
 }
@@ -39,6 +41,7 @@ export function App() {
   const tableDeck = table && findDeck(table.deckId)
   const playing = route === 'table' && table && tableDeck
   const library = !playing && !setupDeck && route !== 'saved'
+  useFinishBanner(Boolean(playing && isFinished(table)) && !help)
 
   useEffect(() => {
     if (!writeLocal(tableKey, table)) setStorageIssue(true)
@@ -86,32 +89,34 @@ export function App() {
 
   return <>
     <header className="site-header"><div className="header-inner">
-      <a className="brand" href="#home" aria-label="CardTalk 홈"><img src="/app-icon.png" width="34" height="34" alt="" />CardTalk</a>
-      <nav aria-label="메인 메뉴">
-        <a href="#home" className="home-nav" aria-current={library ? 'page' : undefined}><Layers2 /> 덱 고르기</a>
-        <a href="#saved" aria-current={route === 'saved' ? 'page' : undefined}><Bookmark /> 보관함</a>
-        <button className="help-button" aria-label="이용 방법" onClick={() => setHelp(true)}><CircleHelp /></button>
+      <a className="brand" href="#home" aria-label={t("CardTalk 홈", "CardTalk home")}><img src="/app-icon.png" width="34" height="34" alt="" />CardTalk</a>
+      <nav aria-label={t("메인 메뉴", "Main menu")}>
+        <a href="#home" className="home-nav" aria-current={library ? 'page' : undefined}><Layers2 /> {t("덱 고르기", "Choose a deck")}</a>
+        <a href="#saved" aria-current={route === 'saved' ? 'page' : undefined}><Bookmark /> {t("보관함", "Saved")}</a>
+        <button className="lang-toggle" onClick={changeLanguage} aria-label={t("Switch to English", "한국어로 변경")}>{t("EN", "한국어")}</button>
+        <button className="help-button" aria-label={t("이용 방법", "How to play")} onClick={() => setHelp(true)}><CircleHelp /></button>
       </nav>
     </div></header>
-    {storageIssue && <p className="storage-notice" role="status">기기 저장 공간을 쓸 수 없어 이번 대화에서만 기록을 보관해요.</p>}
+    {storageIssue && <p className="storage-notice" role="status">{t("기기 저장 공간을 쓸 수 없어 이번 대화에서만 기록을 보관해요.", "Storage is unavailable. Progress will last for this session.")}</p>}
     {playing ? (isFinished(table) ?
       <TableEnd table={table} deck={tableDeck} onReplay={() => start({ deck: tableDeck, players: table.players, rounds: table.rounds })} /> :
       <TablePlay deck={tableDeck} table={table} saved={saved} onToggle={toggleSaved}
         onPlay={action => setTable(current => current && play(current, action))} />) :
       setupDeck ? <TableSetup key={setupDeck.id} deck={setupDeck} onStart={(players, rounds) => requestStart({ deck: setupDeck, players, rounds })} /> :
       route === 'saved' ? <SavedCards ids={saved} onToggle={toggleSaved} /> : <DeckLibrary table={table} />}
-    {help && <Dialog title="이용 방법" onClose={() => setHelp(false)}>
+    {help && <Dialog title={t("이용 방법", "How to play")} onClose={() => setHelp(false)}>
       <div className="help-steps">
-        <div><UsersRound /><p><strong>한 테이블에 모여요</strong>덱과 인원, 바퀴 수를 골라요. 휴대폰을 든 분이 1번 자리예요.</p></div>
-        <div><MessageCircle /><p><strong>카드를 뒤집고 이야기해요</strong>더 듣고 싶으면 꼬리 질문을 열어요. 질문을 바꾸거나, 답하지 않고 다음 차례로 넘겨도 돼요.</p></div>
-        <div><Repeat2 /><p><strong>시계 방향으로 건네요</strong>마지막 분까지 한 번씩 이야기하면 한 바퀴예요. 마음에 든 질문은 책갈피로 보관해요.</p></div>
+        <div><UsersRound /><p><strong>{t("한 테이블에 모여요", "Gather around")}</strong>{t("덱과 인원, 바퀴 수를 골라요. 휴대폰을 든 분이 1번 자리예요.", "Choose a deck, players and rounds. The person holding the phone is seat one.")}</p></div>
+        <div><MessageCircle /><p><strong>{t("카드를 뒤집고 이야기해요", "Flip a card")}</strong>{t("더 듣고 싶으면 꼬리 질문을 열어요. 질문을 바꾸거나, 답하지 않고 다음 차례로 넘겨도 돼요.", "Open the follow-up if you’re curious. Swap the question or pass without answering.")}</p></div>
+        <div><Repeat2 /><p><strong>{t("시계 방향으로 건네요", "Pass clockwise")}</strong>{t("마지막 분까지 한 번씩 이야기하면 한 바퀴예요. 마음에 든 질문은 책갈피로 보관해요.", "One turn each makes a round. Bookmark questions you’d like to revisit.")}</p></div>
       </div>
-      <button className="button primary wide" onClick={() => setHelp(false)}>알겠어요</button>
+      <button className="button primary wide" onClick={() => setHelp(false)}>{t("알겠어요", "Got it")}</button>
+      <div className="privacy-links"><a className="text-action" href={language === "en" ? "./privacy-en.html" : "./privacy.html"}>{t("개인정보처리방침", "Privacy policy")}</a><AdPrivacyOptions /></div>
     </Dialog>}
-    {replacement && <Dialog title="새 대화를 시작할까요?" onClose={() => setReplacement(null)}>
-      <p className="dialog-copy">진행 중인 판이 끝나고 새 카드를 섞어요. 보관함에 담은 질문은 계속 볼 수 있어요.</p>
-      <div className="dialog-actions"><button className="button secondary" onClick={() => setReplacement(null)}>취소</button>
-        <button className="button primary" onClick={() => start(replacement)}>새로 시작 <ArrowRight size={17} /></button></div>
+    {replacement && <Dialog title={t("새 대화를 시작할까요?", "Start a new conversation?")} onClose={() => setReplacement(null)}>
+      <p className="dialog-copy">{t("진행 중인 판이 끝나고 새 카드를 섞어요. 보관함에 담은 질문은 계속 볼 수 있어요.", "This ends the current game and shuffles a new deck. Your saved questions stay with you.")}</p>
+      <div className="dialog-actions"><button className="button secondary" onClick={() => setReplacement(null)}>{t("취소", "Cancel")}</button>
+        <button className="button primary" onClick={() => start(replacement)}>{t("새로 시작 ", "Start again ")}<ArrowRight size={17} /></button></div>
     </Dialog>}
   </>
 }
