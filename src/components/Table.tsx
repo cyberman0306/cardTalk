@@ -98,7 +98,7 @@ export function TablePlay({ table, deck, saved, onToggle, onPlay }: TablePlayPro
   return <main className={'page table-page theme-' + deck.id}>
     <div className="table-strip"><BackLink label={t("잠시 나가기", "Pause")} /><span>{deck.title}</span></div>
     <div className="turn-heading">
-      <div aria-live="polite" aria-atomic="true"><p className="turn-round">{round} / {table.rounds} {t("바퀴", " rounds")}</p><h1>{t(`${seat}번 자리 차례`, `Seat ${seat}’s turn`)}</h1></div>
+      <div aria-live="polite" aria-atomic="true"><p className="turn-round">{round} / {table.rounds} {t("바퀴", table.rounds === 1 ? "round" : "rounds")}</p><h1>{t(`${seat}번 자리 차례`, `Seat ${seat}’s turn`)}</h1></div>
       <div className="seats" aria-label={t(`${table.players}명 중 ${seat}번째 자리`, `Seat ${seat} of ${table.players}`)}>{Array.from({ length: table.players }, (_, idx) =>
         <span key={idx} className={idx + 1 === seat ? 'current' : ''}>{idx + 1}</span>)}</div>
     </div>

@@ -352,3 +352,5 @@ dialog::backdrop { background: #152a2199; }
 
 .lang-toggle { min-width: 44px; min-height: 44px; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 650; }
 html[lang="en"] .tile-heading strong { letter-spacing: -.025em; }
+
+.policy-frame { display: block; width: 100%; height: min(52dvh, 32rem); border: 0; margin: 12px 0; }

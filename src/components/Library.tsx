@@ -48,11 +48,11 @@ export function SavedCards({ ids, onToggle }: { ids: string[]; onToggle: (id: st
     return []
   })
   return <main className="page saved-page">
-    <div className="section-heading"><h1>{t("보관함", "Saved")}</h1><span><Bookmark size={15} /> {cards.length}{t("장", " cards")}</span></div>
+    <div className="section-heading"><h1>{t("보관함", "Saved")}</h1><span><Bookmark size={15} /> {cards.length}{t("장", cards.length === 1 ? " card" : " cards")}</span></div>
     {cards.length ? <div className="saved-grid">{cards.map(({ deck, card }) =>
       <article key={card.id} className={'saved-card theme-' + deck.id}>
         <div className="saved-top"><span className="deck-sign"><DeckArt id={deck.id} />{deck.title}</span>
-          <button className="icon-button" onClick={() => onToggle(card.id)} aria-label={card.question + t("저장 해제", " — remove bookmark")}><Bookmark size={19} fill="currentColor" /></button></div>
+          <button className="icon-button" onClick={() => onToggle(card.id)} aria-label={card.question + t(" — 저장 해제", " — remove bookmark")}><Bookmark size={19} fill="currentColor" /></button></div>
         <h2>{card.question}</h2>
         <details><summary>{t("꼬리 질문", "Follow-up")}</summary><p>{card.followUp}</p></details>
       </article>
