@@ -1,0 +1,3 @@
+• Added Custom Card Packs so you can write and save your own questions
+• Expanded language support to 5 languages: English, Korean, Japanese, Chinese, and Spanish
+• Refined built-in questions and refreshed the home screen card artwork

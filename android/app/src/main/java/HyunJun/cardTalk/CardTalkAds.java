@@ -192,8 +192,25 @@ public class CardTalkAds extends Plugin {
     public void shareInvite(PluginCall call) {
         String question = call.getString("question", "");
         main.post(() -> {
-            boolean english = "en".equals(call.getString("language"));
-            String text = english ? "Shall we start our next gathering with this question?\n“" + question + "”\nCardTalk · One phone, a table of stories" : "다음 모임에서 이 질문으로 시작해 볼래요?\n“" + question + "”\n카드톡 · 휴대폰 한 대로 하는 대화 카드";
+            String lang = call.getString("language", "ko");
+            String text;
+            String chooserTitle;
+            if ("ja".equals(lang)) {
+                text = "次の集まりはこの質問から始めてみませんか？\n「" + question + "」\nCardTalk · スマホ1台で楽しむ会話カード";
+                chooserTitle = "CardTalkを共有";
+            } else if ("zh".equals(lang)) {
+                text = "下次聚会不如从这个问题开始吧？\n“" + question + "”\nCardTalk · 一部手机开启餐桌对话";
+                chooserTitle = "分享 CardTalk";
+            } else if ("es".equals(lang)) {
+                text = "¿Empezamos nuestra próxima reunión con esta pregunta?\n“" + question + "”\nCardTalk · Un teléfono, mil historias";
+                chooserTitle = "Compartir CardTalk";
+            } else if ("en".equals(lang)) {
+                text = "Shall we start our next gathering with this question?\n“" + question + "”\nCardTalk · One phone, a table of stories";
+                chooserTitle = "Share CardTalk";
+            } else {
+                text = "다음 모임에서 이 질문으로 시작해 볼래요?\n“" + question + "”\n카드톡 · 휴대폰 한 대로 하는 대화 카드";
+                chooserTitle = "모임에 카드톡 공유";
+            }
             boolean debug = (getContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             if (!debug && installedFromPlay()) {
                 Uri listing = Uri.parse("https://play.google.com/store/apps/details").buildUpon()
@@ -204,7 +221,7 @@ public class CardTalkAds extends Plugin {
             }
             Intent intent = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text);
             try {
-                getActivity().startActivity(Intent.createChooser(intent, english ? "Share CardTalk" : "모임에 카드톡 공유"));
+                getActivity().startActivity(Intent.createChooser(intent, chooserTitle));
                 call.resolve();
             } catch (android.content.ActivityNotFoundException error) {
                 call.reject("공유할 수 있는 앱을 찾지 못했어요.", error);

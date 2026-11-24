@@ -55,10 +55,10 @@ function isInteger(value: unknown): value is number {
 }
 
 // A previous app version may have shuffled cards that no longer exist.
-export function restoreTable(value: unknown): Table | null {
+export function restoreTable(value: unknown, extraDecks: Deck[] = []): Table | null {
   if (!value || typeof value !== 'object') return null
   const { deckId, players, rounds, turn, cursor, order, revealed } = value as Record<string, unknown>
-  const deck = typeof deckId === 'string' ? findDeck(deckId) : undefined
+  const deck = typeof deckId === 'string' ? findDeck(deckId, extraDecks) : undefined
   if (!deck || !isInteger(players) || !playerOptions.includes(players) ||
       !isInteger(rounds) || !roundOptions.includes(rounds) || typeof revealed !== 'boolean') return null
   if (!isInteger(turn) || turn < 0 || turn > players * rounds || !isInteger(cursor) || cursor < turn) return null

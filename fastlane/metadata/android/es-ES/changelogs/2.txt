@@ -1,0 +1,3 @@
+• Nuevo modo de mazos personalizados para crear y guardar tus propias preguntas
+• Ahora disponible en 5 idiomas: español, coreano, inglés, japonés y chino
+• Preguntas revisadas para conversaciones más naturales

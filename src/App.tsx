@@ -1,13 +1,14 @@
-import { t, changeLanguage, language } from './language'
+import { t, setLanguage, language, supportedLanguages, type Language } from './language'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { App as NativeApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
-import { ArrowRight, Bookmark, CircleHelp, Layers2, MessageCircle, Repeat2, UsersRound, X } from 'lucide-react'
+import { ArrowRight, Bookmark, CircleHelp, Layers2, MessageCircle, Repeat2, Trash2, UsersRound, X } from 'lucide-react'
 import { findDeck, type Deck } from './content/decks.ts'
 import { isFinished, newTable, play, restoreTable, type Table } from './game.ts'
-import { readLocal, restoreSaved, savedKey, tableKey, writeLocal } from './storage.ts'
+import { customDecksKey, readLocal, restoreCustomDecks, restoreSaved, savedKey, tableKey, writeLocal } from './storage.ts'
 import { DeckLibrary, SavedCards } from './components/Library'
 import { TableEnd, TablePlay, TableSetup } from './components/Table'
+import { CustomDeckEditor } from './components/CustomDeckEditor'
 import { AdPrivacyOptions, useFinishBanner } from './components/AndroidExtras'
 
 function subscribeRoute(onChange: () => void) {
@@ -39,19 +40,35 @@ export function App() {
     document.documentElement.lang = locale
     document.title = t('카드톡 · 첫 모임을 여는 대화 카드', 'CardTalk · Conversation cards')
   }, [locale])
-  const [table, setTable] = useState<Table | null>(() => restoreTable(readLocal(tableKey)))
-  const [saved, setSaved] = useState(() => restoreSaved(readLocal(savedKey)))
+  const [initialState] = useState(() => {
+    const customDecks = restoreCustomDecks(readLocal(customDecksKey))
+    return {
+      customDecks,
+      table: restoreTable(readLocal(tableKey), customDecks),
+      saved: restoreSaved(readLocal(savedKey), customDecks),
+    }
+  })
+  const [customDecks, setCustomDecks] = useState<Deck[]>(initialState.customDecks)
+  const [table, setTable] = useState<Table | null>(initialState.table)
+  const [saved, setSaved] = useState<string[]>(initialState.saved)
   const [help, setHelp] = useState(false)
   const [replacement, setReplacement] = useState<Setup | null>(null)
+  const [deletingDeck, setDeletingDeck] = useState<Deck | null>(null)
   const [storageIssue, setStorageIssue] = useState(false)
-  const setupDeck = route.startsWith('deck/') ? findDeck(route.slice(5)) : undefined
-  const tableDeck = table && findDeck(table.deckId)
+
+  const creatingCustom = route === 'custom/new'
+  const editingCustom = route.startsWith('custom/') && route.endsWith('/edit')
+    ? customDecks.find(deck => deck.id === route.slice(7, -5))
+    : undefined
+  const setupDeck = route.startsWith('deck/') ? findDeck(route.slice(5), customDecks) : undefined
+  const tableDeck = table && findDeck(table.deckId, customDecks)
   const playing = route === 'table' && table && tableDeck
-  const library = !playing && !setupDeck && route !== 'saved'
+  const library = !playing && !setupDeck && !creatingCustom && !editingCustom && route !== 'saved'
   useFinishBanner(Boolean(playing && isFinished(table)) && !help && !policy)
 
   const previousTable = useRef(table)
   const previousSaved = useRef(saved)
+  const previousCustom = useRef(customDecks)
   useEffect(() => {
     if (previousTable.current === table) return
     previousTable.current = table
@@ -63,8 +80,14 @@ export function App() {
     if (!writeLocal(savedKey, saved)) setStorageIssue(true)
   }, [saved])
   useEffect(() => {
+    if (previousCustom.current === customDecks) return
+    previousCustom.current = customDecks
+    if (!writeLocal(customDecksKey, customDecks)) setStorageIssue(true)
+  }, [customDecks])
+  useEffect(() => {
     setHelp(false)
     setReplacement(null)
+    setDeletingDeck(null)
     window.scrollTo(0, 0)
     const main = document.querySelector('main')
     if (main) {
@@ -79,11 +102,12 @@ export function App() {
       if (policy) closePolicy()
       else if (help) setHelp(false)
       else if (replacement) setReplacement(null)
+      else if (deletingDeck) setDeletingDeck(null)
       else if (!library) window.location.hash = 'home'
       else void NativeApp.minimizeApp()
     })
     return () => { void listener.then(handle => handle.remove()) }
-  }, [help, replacement, library, policy, route])
+  }, [help, replacement, deletingDeck, library, policy, route])
 
   function closePolicy() {
     if (history.state?.cardtalkPolicy) history.back()
@@ -106,13 +130,41 @@ export function App() {
     setSaved(previous => previous.includes(id) ? previous.filter(item => item !== id) : [id, ...previous])
   }
 
+  function saveCustomDeck(deck: Deck, openAfter: boolean) {
+    const nextDecks = customDecks.some(item => item.id === deck.id)
+      ? customDecks.map(item => item.id === deck.id ? deck : item)
+      : [deck, ...customDecks]
+    setCustomDecks(nextDecks)
+    if (table && table.deckId === deck.id && !restoreTable(table, nextDecks)) {
+      setTable(null)
+    }
+    setSaved(previous => restoreSaved(previous, nextDecks))
+    window.location.hash = openAfter ? 'deck/' + deck.id : 'home'
+  }
+
+  function confirmDeleteDeck(deck: Deck) {
+    const nextDecks = customDecks.filter(item => item.id !== deck.id)
+    setCustomDecks(nextDecks)
+    if (table && table.deckId === deck.id) setTable(null)
+    setSaved(previous => restoreSaved(previous, nextDecks))
+    setDeletingDeck(null)
+    window.location.hash = 'home'
+  }
+
   return <>
     <header className="site-header"><div className="header-inner">
       <a className="brand" href="#home" aria-label={t("CardTalk 홈", "CardTalk home")}><img src="/app-icon.png" width="34" height="34" alt="" />CardTalk</a>
       <nav aria-label={t("메인 메뉴", "Main menu")}>
         <a href="#home" className="home-nav" aria-current={library ? 'page' : undefined}><Layers2 /> {t("덱 고르기", "Choose a deck")}</a>
         <a href="#saved" aria-current={route === 'saved' ? 'page' : undefined}><Bookmark /> {t("보관함", "Saved")}</a>
-        <button className="lang-toggle" onClick={() => { changeLanguage(); setLocale(language) }} aria-label={t("영어로 변경", "Switch to Korean")}>{t("EN", "한국어")}</button>
+        <select
+          className="lang-toggle"
+          value={locale}
+          aria-label={t("언어 선택", "Language")}
+          onChange={e => { setLanguage(e.target.value as Language); setLocale(language) }}
+        >
+          {supportedLanguages.map(item => <option key={item.code} value={item.code}>{item.label}</option>)}
+        </select>
         <button className="help-button" aria-label={t("이용 방법", "How to play")} onClick={() => setHelp(true)}><CircleHelp /></button>
       </nav>
     </div></header>
@@ -121,8 +173,11 @@ export function App() {
       <TableEnd table={table} deck={tableDeck} onReplay={() => start({ deck: tableDeck, players: table.players, rounds: table.rounds })} /> :
       <TablePlay deck={tableDeck} table={table} saved={saved} onToggle={toggleSaved}
         onPlay={action => setTable(current => current && play(current, action))} />) :
+      creatingCustom ? <CustomDeckEditor key="new" onSave={saveCustomDeck} /> :
+      editingCustom ? <CustomDeckEditor key={editingCustom.id} initial={editingCustom} onSave={saveCustomDeck} onDelete={setDeletingDeck} /> :
       setupDeck ? <TableSetup key={setupDeck.id} deck={setupDeck} onStart={(players, rounds) => requestStart({ deck: setupDeck, players, rounds })} /> :
-      route === 'saved' ? <SavedCards ids={saved} onToggle={toggleSaved} /> : <DeckLibrary table={table} />}
+      route === 'saved' ? <SavedCards ids={saved} customDecks={customDecks} onToggle={toggleSaved} /> :
+      <DeckLibrary table={table} customDecks={customDecks} />}
     {help && !policy && <Dialog title={t("이용 방법", "How to play")} onClose={() => setHelp(false)}>
       <div className="help-steps">
         <div><UsersRound /><p><strong>{t("한 테이블에 모여요", "Gather around")}</strong>{t("덱과 인원, 바퀴 수를 골라요. 휴대폰을 든 분이 1번 자리예요.", "Choose a deck, players and rounds. The person holding the phone is seat one.")}</p></div>
@@ -136,13 +191,26 @@ export function App() {
       }}>{t("개인정보처리방침", "Privacy policy")}</button><AdPrivacyOptions /></div>
     </Dialog>}
     {policy && <Dialog title={t("개인정보처리방침", "Privacy policy")} onClose={closePolicy}>
-      <iframe className="policy-frame" title={t("처리방침 본문", "Policy details")} src={locale === 'en' ? './privacy-en.html#embedded' : './privacy.html#embedded'} />
+      <iframe className="policy-frame" title={t("처리방침 본문", "Policy details")} src={locale === 'ko' ? './privacy.html#embedded' : './privacy-en.html#embedded'} />
       <button className="button secondary wide" onClick={closePolicy}>{t("돌아가기", "Go back")}</button>
     </Dialog>}
     {replacement && <Dialog title={t("새 대화를 시작할까요?", "Start a new conversation?")} onClose={() => setReplacement(null)}>
       <p className="dialog-copy">{t("진행 중인 판이 끝나고 새 카드를 섞어요. 보관함에 담은 질문은 계속 볼 수 있어요.", "This ends the current game and shuffles a new deck. Your saved questions stay with you.")}</p>
       <div className="dialog-actions"><button className="button secondary" onClick={() => setReplacement(null)}>{t("취소", "Cancel")}</button>
         <button className="button primary" onClick={() => start(replacement)}>{t("새로 시작 ", "Start again ")}<ArrowRight size={17} /></button></div>
+    </Dialog>}
+    {deletingDeck && <Dialog title={t("이 카드팩을 삭제할까요?", "Delete this card pack?")} onClose={() => setDeletingDeck(null)}>
+      <p className="dialog-copy">{t(
+        `‘${deletingDeck.title}’ 카드팩과 안에 담긴 질문 ${deletingDeck.cards.length}장이 기기에서 삭제돼요.`,
+        `“${deletingDeck.title}” and its ${deletingDeck.cards.length} cards will be removed from this device.`,
+        {
+          ja: `「${deletingDeck.title}」と中の質問${deletingDeck.cards.length}枚がこの端末から削除されます。`,
+          zh: `“${deletingDeck.title}”及其中的 ${deletingDeck.cards.length} 张问题卡牌将从此设备中删除。`,
+          es: `“${deletingDeck.title}” y sus ${deletingDeck.cards.length} cartas se eliminarán de este dispositivo.`,
+        }
+      )}</p>
+      <div className="dialog-actions"><button className="button secondary" onClick={() => setDeletingDeck(null)}>{t("취소", "Cancel")}</button>
+        <button className="button danger" onClick={() => confirmDeleteDeck(deletingDeck)}><Trash2 size={16} /> {t("삭제하기", "Delete")}</button></div>
     </Dialog>}
   </>
 }
